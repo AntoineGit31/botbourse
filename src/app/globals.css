@@ -1,26 +1,183 @@
 @import "tailwindcss";
 
+/* ─── Design System (SKILL.md: Variance 8 / Motion 6 / Density 4) ─── */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Base palette — Zinc neutral, no pure black (#000 is banned) */
+  --bg-primary: #09090b;       /* zinc-950 */
+  --bg-surface: #18181b;       /* zinc-900 */
+  --bg-elevated: #27272a;      /* zinc-800 */
+  --bg-subtle: #3f3f46;        /* zinc-700 */
+  
+  /* Text */
+  --text-primary: #fafafa;     /* zinc-50 */
+  --text-secondary: #a1a1aa;   /* zinc-400 */
+  --text-muted: #71717a;       /* zinc-500 */
+  
+  /* Accent — Emerald (single accent, <80% saturation) */
+  --accent: #10b981;           /* emerald-500 */
+  --accent-soft: rgba(16, 185, 129, 0.12);
+  --accent-hover: #34d399;     /* emerald-400 */
+  
+  /* Negative — Rose for losses/bearish */
+  --negative: #f43f5e;         /* rose-500 */
+  --negative-soft: rgba(244, 63, 94, 0.12);
+  
+  /* Neutral accent for "neutral" trend */
+  --neutral-accent: #a1a1aa;
+  --neutral-soft: rgba(161, 161, 170, 0.12);
+  
+  /* Borders & Glass */
+  --border: rgba(255, 255, 255, 0.06);
+  --border-active: rgba(255, 255, 255, 0.12);
+  --glass-border: rgba(255, 255, 255, 0.10);
+  --glass-inner-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  
+  /* Shadows — tinted to zinc hue, not pure black */
+  --shadow-sm: 0 1px 2px rgba(9, 9, 11, 0.4);
+  --shadow-md: 0 4px 12px rgba(9, 9, 11, 0.5);
+  --shadow-lg: 0 12px 32px rgba(9, 9, 11, 0.6);
+  --shadow-diffusion: 0 20px 40px -15px rgba(9, 9, 11, 0.5);
+  
+  /* Motion — cubic-bezier for MOTION_INTENSITY 6 */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-fast: 0.15s var(--ease-out-expo);
+  --transition-base: 0.3s var(--ease-out-expo);
+  --transition-slow: 0.5s var(--ease-out-expo);
+  
+  /* Spacing rhythm */
+  --section-gap: 4rem;
+  --container-max: 1400px;
 }
 
+/* ─── Tailwind v4 Theme Tokens ─── */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: var(--bg-primary);
+  --color-foreground: var(--text-primary);
+  --color-surface: var(--bg-surface);
+  --color-elevated: var(--bg-elevated);
+  --color-subtle: var(--bg-subtle);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-negative: var(--negative);
+  --color-negative-soft: var(--negative-soft);
+  --color-neutral-accent: var(--neutral-accent);
+  --color-neutral-soft: var(--neutral-soft);
+  --color-muted: var(--text-muted);
+  --color-secondary: var(--text-secondary);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ─── Base Styles ─── */
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  line-height: 1.6;
+}
+
+/* ─── Scrollbar (subtle, matches dark theme) ─── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--bg-subtle);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* ─── Selection ─── */
+::selection {
+  background: rgba(16, 185, 129, 0.3);
+  color: var(--text-primary);
+}
+
+/* ─── Utility Classes ─── */
+.glass-panel {
+  background: rgba(24, 24, 27, 0.7);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-inner-shadow), var(--shadow-md);
+}
+
+.glass-panel-strong {
+  background: rgba(24, 24, 27, 0.85);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-inner-shadow), var(--shadow-lg);
+}
+
+/* Staggered animation helper */
+.stagger-item {
+  opacity: 0;
+  transform: translateY(12px);
+  animation: stagger-in 0.5s var(--ease-out-expo) forwards;
+  animation-delay: calc(var(--index, 0) * 80ms);
+}
+
+@keyframes stagger-in {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Skeleton shimmer */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--bg-elevated);
+  border-radius: 0.5rem;
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.04) 50%,
+    transparent 100%
+  );
+  animation: shimmer 2s infinite;
+  transform: translateX(-100%);
+}
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Tactile feedback on interactive elements */
+.tactile {
+  transition: transform var(--transition-fast);
+}
+.tactile:active {
+  transform: scale(0.98) translateY(1px);
+}
+
+/* Divider (used instead of cards per SKILL.md Rule 4) */
+.divide-line {
+  border-color: var(--border);
+}
+
+/* Number display — always monospace */
+.num {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
 }

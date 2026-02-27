@@ -39,3 +39,17 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# clerk configuration (can include secrets)
+/.clerk/
+
+/src/generated/prisma
+
+# Prisma SQLite database
+dev.db
+dev.db-journal
+
+# ML Models and generated JSON data files (too large for Git)
+/public/data/*
+/python/models/*
+__pycache__/
