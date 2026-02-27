@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import {
     CaretRight,
@@ -15,6 +15,7 @@ import {
     Warning,
     Pulse,
     ArrowsClockwise,
+    Star,
 } from "@phosphor-icons/react";
 import { CHART_PERIODS } from "@/lib/constants";
 import {
@@ -32,6 +33,8 @@ import TrendBadge from "@/components/ui/TrendBadge";
 import RiskDots from "@/components/ui/RiskDots";
 import PriceChart from "@/components/asset/PriceChart";
 import { useTranslation } from "@/components/I18nProvider";
+import { toggleWatchlist } from "@/app/actions/watchlist";
+import { useAuth } from "@clerk/nextjs";
 
 interface AssetDetailClientProps {
     asset: Asset | null;
@@ -39,12 +42,17 @@ interface AssetDetailClientProps {
     prices: OHLCData[];
     features: Record<string, number | string | null> | null;
     ticker: string;
+    isWatchingInitial?: boolean;
 }
 
-export default function AssetDetailClient({ asset, predictions, prices, features, ticker }: AssetDetailClientProps) {
+export default function AssetDetailClient({ asset, predictions, prices, features, ticker, isWatchingInitial = false }: AssetDetailClientProps) {
     const { t } = useTranslation();
+    const { isSignedIn } = useAuth();
     const [chartPeriod, setChartPeriod] = useState("1Y");
     const [liveData, setLiveData] = useState<{ price: number, changePercent: number, fetching: boolean } | null>(null);
+
+    const [isWatching, setIsWatching] = useState(isWatchingInitial);
+    const [isPending, startTransition] = useTransition();
 
     const fetchLivePrice = async () => {
         if (!ticker) return;
@@ -62,6 +70,25 @@ export default function AssetDetailClient({ asset, predictions, prices, features
             setLiveData(prev => prev ? { ...prev, fetching: false } : null);
             console.error("Fetch Live Price Exception:", e);
         }
+    };
+
+    const handleToggleWatchlist = () => {
+        if (!isSignedIn) {
+            alert("Please sign in to add assets to your watchlist!");
+            return;
+        }
+
+        const newWatchingState = !isWatching;
+        setIsWatching(newWatchingState);
+
+        startTransition(async () => {
+            try {
+                await toggleWatchlist(ticker, !newWatchingState);
+            } catch (error) {
+                console.error("Failed to update watchlist", error);
+                setIsWatching(!newWatchingState); // Revert on failure
+            }
+        });
     };
 
     const chartData = useMemo(() => {
@@ -141,7 +168,7 @@ export default function AssetDetailClient({ asset, predictions, prices, features
                             {asset.name}
                             <span className="text-lg ml-2 font-semibold num" style={{ color: "var(--text-muted)" }}>{asset.ticker}</span>
                         </h1>
-                        <div className="flex items-center justify-between mt-2">
+                        <div className="flex items-center justify-between mt-2 flex-wrap gap-4">
                             <div className="flex items-baseline gap-3">
                                 <span className="text-3xl md:text-4xl font-bold num transition-colors duration-300" style={{ color: liveData?.fetching ? "var(--text-muted)" : "var(--text-primary)" }}>
                                     {currentPrice > 0 ? formatPrice(currentPrice, asset.currency) : "—"}
@@ -152,15 +179,31 @@ export default function AssetDetailClient({ asset, predictions, prices, features
                                     </span>
                                 )}
                             </div>
-                            <button
-                                onClick={fetchLivePrice}
-                                disabled={liveData?.fetching}
-                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-all duration-300 ${liveData?.fetching ? "opacity-50" : "hover:bg-white/5"}`}
-                                style={{ background: "var(--bg-surface)", border: "1px solid var(--border)", color: "var(--text-secondary)" }}
-                            >
-                                <ArrowsClockwise size={14} className={liveData?.fetching ? "animate-spin" : ""} />
-                                {liveData?.fetching ? "Updating..." : "Live Price"}
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={handleToggleWatchlist}
+                                    disabled={isPending}
+                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-all duration-300 hover:bg-white/5`}
+                                    style={{
+                                        background: isWatching ? "var(--accent-soft)" : "var(--bg-surface)",
+                                        border: isWatching ? "1px solid var(--accent)" : "1px solid var(--border)",
+                                        color: isWatching ? "var(--accent)" : "var(--text-secondary)"
+                                    }}
+                                >
+                                    <Star size={14} weight={isWatching ? "fill" : "regular"} className={isPending ? "animate-pulse" : ""} />
+                                    {isWatching ? "Following" : "Watchlist"}
+                                </button>
+
+                                <button
+                                    onClick={fetchLivePrice}
+                                    disabled={liveData?.fetching}
+                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-all duration-300 ${liveData?.fetching ? "opacity-50" : "hover:bg-white/5"}`}
+                                    style={{ background: "var(--bg-surface)", border: "1px solid var(--border)", color: "var(--text-secondary)" }}
+                                >
+                                    <ArrowsClockwise size={14} className={liveData?.fetching ? "animate-spin" : ""} />
+                                    {liveData?.fetching ? "Updating..." : "Live Price"}
+                                </button>
+                            </div>
                         </div>
                     </div>
 
