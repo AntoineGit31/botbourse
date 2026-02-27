@@ -189,7 +189,7 @@ STOCKS = {
     # ══════════════════════════════════════════
     "ABI.BR":    {"name": "Anheuser-Busch InBev", "sector": "Consumer", "region": "Europe", "exchange": "Euronext Brussels"},
     "UCB.BR":    {"name": "UCB SA", "sector": "Healthcare", "region": "Europe", "exchange": "Euronext Brussels"},
-    "SOLB.BR":   {"name": "Solvay SA", "sector": "Materials", "region": "Europe", "exchange": "Euronext Brussels"},,
+    "SOLB.BR":   {"name": "Solvay SA", "sector": "Materials", "region": "Europe", "exchange": "Euronext Brussels"},
     # ══════════════════════════════════════════
     #  S&P 500 & NASDAQ 100 Extensions
     # ══════════════════════════════════════════
@@ -747,6 +747,20 @@ STOCKS = {
     "Workday, Inc-": {"name": "WDAY", "sector": "Technology", "region": "US", "exchange": "NASDAQ"},
     "Xcel Energy": {"name": "XEL", "sector": "Utilities", "region": "US", "exchange": "NASDAQ"},
     "Zscaler": {"name": "ZS", "sector": "Technology", "region": "US", "exchange": "NASDAQ"},
+    # ══════════════════════════════════════════
+    #  Euro Stoxx 50 Extensions
+    # ══════════════════════════════════════════
+    "ADYEN.AS": {"name": "Adyen", "sector": "Naamloze vennootschap", "region": "Europe", "exchange": "Euro Stoxx 50"},
+    "ARGX.BR": {"name": "Argenx", "sector": "Naamloze vennootschap", "region": "Europe", "exchange": "Euro Stoxx 50"},
+    "ASML.AS": {"name": "ASML Holding", "sector": "Naamloze vennootschap", "region": "Europe", "exchange": "Euro Stoxx 50"},
+    "BAYN.DE": {"name": "Bayer", "sector": "Aktiengesellschaft", "region": "Europe", "exchange": "Euro Stoxx 50"},
+    "BBVA.MC": {"name": "BMAD: BBVA", "sector": "BBVA", "region": "Europe", "exchange": "Euro Stoxx 50"},
+    "RACE.MI": {"name": "Ferrari", "sector": "Naamloze vennootschap", "region": "Europe", "exchange": "Euro Stoxx 50"},
+    "NDA-FI.HE": {"name": "Nasdaq Helsinki: NDA FI", "sector": "Nordea", "region": "Europe", "exchange": "Euro Stoxx 50"},
+    "RHM.DE": {"name": "Rheinmetall", "sector": "Aktiengesellschaft", "region": "Europe", "exchange": "Euro Stoxx 50"},
+    "SAP.DE": {"name": "SAP", "sector": "Societas Europaea", "region": "Europe", "exchange": "Euro Stoxx 50"},
+    "ENR.DE": {"name": "Siemens Energy", "sector": "Aktiengesellschaft", "region": "Europe", "exchange": "Euro Stoxx 50"},
+    "VOW.DE": {"name": "Volkswagen Group", "sector": "Aktiengesellschaft", "region": "Europe", "exchange": "Euro Stoxx 50"},
 }
 
 ETFS = {
