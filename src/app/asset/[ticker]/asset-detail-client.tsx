@@ -101,8 +101,21 @@ export default function AssetDetailClient({ asset, predictions, prices, features
             return liveChartData;
         }
         if (prices.length === 0) return [];
-        const days = { "1D": 1, "1W": 7, "1M": 30, "6M": 180, "1Y": 365, "5Y": 1825 }[chartPeriod] || 365;
-        return prices.slice(-days);
+        if (chartPeriod === "5Y") return prices;
+
+        const lastItem = prices[prices.length - 1];
+        if (!lastItem || typeof lastItem.time !== "string") return prices.slice(-252);
+
+        const targetDate = new Date(lastItem.time);
+        if (chartPeriod === "1W") targetDate.setDate(targetDate.getDate() - 7);
+        else if (chartPeriod === "1M") targetDate.setMonth(targetDate.getMonth() - 1);
+        else if (chartPeriod === "6M") targetDate.setMonth(targetDate.getMonth() - 6);
+        else if (chartPeriod === "1Y") targetDate.setFullYear(targetDate.getFullYear() - 1);
+        else return prices.slice(-252);
+
+        const targetDateStr = targetDate.toISOString().split("T")[0];
+        const filtered = prices.filter((p) => typeof p.time === "string" && p.time >= targetDateStr);
+        return filtered.length > 0 ? filtered : prices.slice(-252);
     }, [chartPeriod, prices, liveChartData]);
 
     if (!asset) {
@@ -126,21 +139,33 @@ export default function AssetDetailClient({ asset, predictions, prices, features
     // Compute performance from prices
     const perf = useMemo(() => {
         if (prices.length < 2) return null;
-        const latest = prices[prices.length - 1].close;
-        const get = (days: number) => {
-            const idx = Math.max(0, prices.length - days - 1);
-            return ((latest / prices[idx].close) - 1) * 100;
+
+        const lastItem = prices[prices.length - 1];
+        if (typeof lastItem.time !== "string") return null;
+
+        const latest = lastItem.close;
+        const lastDate = new Date(lastItem.time);
+
+        const getReturn = (targetDateStr: string) => {
+            const matchIndex = prices.findIndex((p) => typeof p.time === "string" && p.time >= targetDateStr);
+            if (matchIndex === -1) return null;
+            return ((latest / prices[matchIndex].close) - 1) * 100;
         };
+
+        const getDateStr = (monthsToSubtract: number, daysToSubtract = 0) => {
+            const d = new Date(lastDate);
+            d.setMonth(d.getMonth() - monthsToSubtract);
+            d.setDate(d.getDate() - daysToSubtract);
+            return d.toISOString().split("T")[0];
+        };
+
         return {
-            "1W": prices.length > 5 ? get(5) : null,
-            "1M": prices.length > 22 ? get(22) : null,
-            "3M": prices.length > 66 ? get(66) : null,
-            "6M": prices.length > 132 ? get(132) : null,
-            "1Y": prices.length > 252 ? get(252) : null,
-            "YTD": (() => {
-                const jan1 = prices.findIndex(p => p.time >= `${new Date().getFullYear()}-01-01`);
-                return jan1 >= 0 ? ((latest / prices[jan1].close) - 1) * 100 : null;
-            })(),
+            "1W": getReturn(getDateStr(0, 7)),
+            "1M": getReturn(getDateStr(1, 0)),
+            "3M": getReturn(getDateStr(3, 0)),
+            "6M": getReturn(getDateStr(6, 0)),
+            "1Y": getReturn(getDateStr(12, 0)),
+            "YTD": getReturn(`${lastDate.getFullYear()}-01-01`),
         };
     }, [prices]);
 
