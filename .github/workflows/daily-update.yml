@@ -1,0 +1,43 @@
+name: Daily BotBourse Data Update
+
+on:
+  schedule:
+    # Runs at 08:00 UTC every day
+    - cron: '0 8 * * *'
+  # Allows you to trigger the workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  update-data:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # We need a token that can push back to the repo if necessary, though GITHUB_TOKEN is often sufficient.
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13' # Or whatever exact version Antoine uses locally
+
+      - name: Install Python dependencies
+        run: |
+          cd python
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Data Update Script
+        run: |
+          # We use the existing bat file since we are on windows-latest runner
+          .\update-data.bat
+
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "bot@github.com"
+          git add public/data/*
+          git commit -m "chore(data): auto-update daily market data, features, and assets" || echo "No changes to commit"
+          git push
