@@ -50,7 +50,5 @@ dev.db
 dev.db-journal
 
 # ML Models and generated JSON data files (too large for Git)
-/public/data/features/
-/public/data/prices/
 /python/models/*
 __pycache__/
