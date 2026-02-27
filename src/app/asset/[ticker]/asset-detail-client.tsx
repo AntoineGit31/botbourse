@@ -50,6 +50,7 @@ export default function AssetDetailClient({ asset, predictions, prices, features
     const { isSignedIn } = useAuth();
     const [chartPeriod, setChartPeriod] = useState("1Y");
     const [liveData, setLiveData] = useState<{ price: number, changePercent: number, fetching: boolean } | null>(null);
+    const [liveChartData, setLiveChartData] = useState<OHLCData[] | null>(null);
 
     const [isWatching, setIsWatching] = useState(isWatchingInitial);
     const [isPending, startTransition] = useTransition();
@@ -62,6 +63,10 @@ export default function AssetDetailClient({ asset, predictions, prices, features
             const data = await res.json();
             if (res.ok && data.price !== undefined) {
                 setLiveData({ price: data.price, changePercent: data.changePercent, fetching: false });
+                if (data.intradayPrices && data.intradayPrices.length > 0) {
+                    setLiveChartData(data.intradayPrices);
+                    setChartPeriod("1D"); // Auto switch to 1D to show live chart
+                }
             } else {
                 console.error("API Error:", data);
                 setLiveData(prev => prev ? { ...prev, fetching: false } : null);
@@ -92,10 +97,13 @@ export default function AssetDetailClient({ asset, predictions, prices, features
     };
 
     const chartData = useMemo(() => {
+        if (chartPeriod === "1D" && liveChartData) {
+            return liveChartData;
+        }
         if (prices.length === 0) return [];
         const days = { "1D": 1, "1W": 7, "1M": 30, "6M": 180, "1Y": 365, "5Y": 1825 }[chartPeriod] || 365;
         return prices.slice(-days);
-    }, [chartPeriod, prices]);
+    }, [chartPeriod, prices, liveChartData]);
 
     if (!asset) {
         return (
