@@ -1,0 +1,12 @@
+# BotBourse Python Pipeline
+
+## Dependencies
+yfinance>=0.2.36
+pandas>=2.1.0
+numpy>=1.24.0
+ta>=0.11.0
+lightgbm
+scikit-learn
+scipy
+requests>=2.31.0
+python-dateutil>=2.8.2

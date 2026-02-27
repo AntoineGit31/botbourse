@@ -1,0 +1,41 @@
+[
+  {
+    "horizon": "short",
+    "type": "classifier",
+    "accuracy": 0.4879,
+    "n_train": 138047,
+    "n_val": 34512,
+    "top_features": [
+      "volatility_60d",
+      "volatility_20d",
+      "price_vs_sma200",
+      "return_60d",
+      "drawdown"
+    ],
+    "trained_at": "2026-02-27T13:37:16.158485+00:00",
+    "version": "v1.0"
+  },
+  {
+    "horizon": "medium",
+    "type": "regressor",
+    "mae": 0.192,
+    "directional_accuracy": 0.7538,
+    "n_train": 107503,
+    "n_val": 26876,
+    "top_features": [
+      "price_vs_sma200",
+      "volatility_60d",
+      "drawdown",
+      "return_60d",
+      "volatility_20d"
+    ],
+    "trained_at": "2026-02-27T13:37:20.580503+00:00",
+    "version": "v1.0"
+  },
+  {
+    "horizon": "long",
+    "type": "heuristic",
+    "version": "v1.0",
+    "trained_at": "2026-02-27T13:37:20.592294+00:00"
+  }
+]
