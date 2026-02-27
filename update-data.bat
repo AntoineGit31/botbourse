@@ -22,5 +22,3 @@ py pipeline.py
 echo.
 echo [*] Done! Start the dev server with start.bat
 echo.
-
-pause
