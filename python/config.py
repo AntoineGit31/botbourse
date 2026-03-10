@@ -748,6 +748,18 @@ STOCKS = {
     "XEL": {"name": "Xcel Energy", "sector": "Utilities", "region": "US", "exchange": "NASDAQ"},
     "ZS": {"name": "Zscaler", "sector": "Technology", "region": "US", "exchange": "NASDAQ"},
     # ══════════════════════════════════════════
+    #  Asia — Mega Caps (ADRs & US Listings)
+    # ══════════════════════════════════════════
+    "TSM":       {"name": "Taiwan Semiconductor", "sector": "Technology", "region": "Asia", "exchange": "NYSE"},
+    "BABA":      {"name": "Alibaba Group", "sector": "Consumer", "region": "Asia", "exchange": "NYSE"},
+    "TM":        {"name": "Toyota Motor", "sector": "Consumer", "region": "Asia", "exchange": "NYSE"},
+    "SONY":      {"name": "Sony Group", "sector": "Consumer", "region": "Asia", "exchange": "NYSE"},
+    "HDB":       {"name": "HDFC Bank", "sector": "Finance", "region": "Asia", "exchange": "NYSE"},
+    "INFY":      {"name": "Infosys", "sector": "Technology", "region": "Asia", "exchange": "NYSE"},
+    "JD":        {"name": "JD.com", "sector": "Consumer", "region": "Asia", "exchange": "NASDAQ"},
+    "BIDU":      {"name": "Baidu Inc.", "sector": "Technology", "region": "Asia", "exchange": "NASDAQ"},
+
+    # ══════════════════════════════════════════
     #  Euro Stoxx 50 Extensions
     # ══════════════════════════════════════════
     "ADYEN.AS": {"name": "Adyen", "sector": "Naamloze vennootschap", "region": "Europe", "exchange": "Euro Stoxx 50"},
@@ -793,6 +805,13 @@ ETFS = {
     "EEM":      {"name": "iShares MSCI Emerging Markets", "index_tracked": "MSCI Emerging Markets", "ter": 0.0068, "domicile": "US", "category": "Equity Emerging Markets", "region": "Asia", "exchange": "NYSE"},
     "VWO":      {"name": "Vanguard FTSE Emerging Markets", "index_tracked": "FTSE Emerging Markets", "ter": 0.0008, "domicile": "US", "category": "Equity Emerging Markets", "region": "Asia", "exchange": "NYSE"},
     "FXI":      {"name": "iShares China Large-Cap ETF", "index_tracked": "FTSE China 50", "ter": 0.0074, "domicile": "US", "category": "Equity China", "region": "Asia", "exchange": "NYSE"},
+
+    # ── Asia Pacific Equity ──
+    "AAXJ":     {"name": "iShares MSCI AC Asia ex Japan", "index_tracked": "MSCI AC Asia ex Japan", "ter": 0.0068, "domicile": "US", "category": "Equity Asia", "region": "Asia", "exchange": "NASDAQ"},
+    "EWJ":      {"name": "iShares MSCI Japan ETF", "index_tracked": "MSCI Japan", "ter": 0.0050, "domicile": "US", "category": "Equity Japan", "region": "Asia", "exchange": "NYSE"},
+    "INDA":     {"name": "iShares MSCI India ETF", "index_tracked": "MSCI India", "ter": 0.0065, "domicile": "US", "category": "Equity India", "region": "Asia", "exchange": "BATS"},
+    "EWY":      {"name": "iShares MSCI South Korea", "index_tracked": "MSCI South Korea", "ter": 0.0058, "domicile": "US", "category": "Equity South Korea", "region": "Asia", "exchange": "NYSE"},
+    "EWT":      {"name": "iShares MSCI Taiwan ETF", "index_tracked": "MSCI Taiwan", "ter": 0.0058, "domicile": "US", "category": "Equity Taiwan", "region": "Asia", "exchange": "NYSE"},
 
     # ── Sector ETFs ──
     "XLK":      {"name": "Technology Select Sector SPDR", "index_tracked": "S&P Technology", "ter": 0.0009, "domicile": "US", "category": "Sector Technology", "region": "US", "exchange": "NYSE"},

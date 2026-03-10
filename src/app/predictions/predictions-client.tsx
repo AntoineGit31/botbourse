@@ -52,11 +52,13 @@ export default function PredictionsClient({
 
     const opportunities = filtered
         .filter((p) => p.expectedReturn > 0)
-        .sort((a, b) => b.expectedReturn - a.expectedReturn);
+        .sort((a, b) => b.expectedReturn - a.expectedReturn)
+        .slice(0, 20);
 
     const risks = filtered
         .filter((p) => p.expectedReturn <= 0)
-        .sort((a, b) => a.expectedReturn - b.expectedReturn);
+        .sort((a, b) => a.expectedReturn - b.expectedReturn)
+        .slice(0, 20);
 
     const lastRunDate = new Date(lastRun).toLocaleDateString("en-US", {
         year: "numeric", month: "short", day: "numeric",
@@ -232,7 +234,7 @@ export default function PredictionsClient({
                     <EmptyState title={t("preds.risk.empty_title")} description={t("preds.risk.empty_desc")} />
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-[1.1fr_1fr] gap-4">
-                        {risks.slice(0, 10).map((pred, i) => (
+                        {risks.map((pred, i) => (
                             <div
                                 key={`${pred.ticker}-${pred.horizon}`}
                                 className="rounded-xl p-4 stagger-item tactile"
