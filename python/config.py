@@ -7,6 +7,11 @@ Defines the universe of assets to track, horizons, and output paths.
 import os
 from pathlib import Path
 
+try:
+    from extra_universe import EXTRA_STOCKS, EXTRA_ETFS
+except ImportError:
+    EXTRA_STOCKS, EXTRA_ETFS = {}, {}
+
 # ─── Paths ───
 BASE_DIR = Path(__file__).parent
 DATA_DIR = BASE_DIR.parent / "public" / "data"  # Output into Next.js public/ for easy access
@@ -831,6 +836,10 @@ ETFS = {
     "SLV":      {"name": "iShares Silver Trust", "index_tracked": "Silver Spot Price", "ter": 0.0050, "domicile": "US", "category": "Commodity Silver", "region": "World", "exchange": "NYSE"},
     "TLT":      {"name": "iShares 20+ Year Treasury Bond", "index_tracked": "ICE US Treasury 20+ Year", "ter": 0.0015, "domicile": "US", "category": "Bond US Long Term", "region": "US", "exchange": "NASDAQ"},
 }
+
+# Merge the dynamically loaded huge lists into the core maps
+STOCKS.update(EXTRA_STOCKS)
+ETFS.update(EXTRA_ETFS)
 
 # Combined universe
 ALL_TICKERS = list(STOCKS.keys()) + list(ETFS.keys())
