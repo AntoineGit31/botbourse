@@ -34,7 +34,7 @@ import RiskDots from "@/components/ui/RiskDots";
 import PriceChart from "@/components/asset/PriceChart";
 import { useTranslation } from "@/components/I18nProvider";
 import { toggleWatchlist } from "@/app/actions/watchlist";
-import { useAuth } from "@clerk/nextjs";
+import { useAuth, useClerk } from "@clerk/nextjs";
 
 interface AssetDetailClientProps {
     asset: Asset | null;
@@ -48,6 +48,7 @@ interface AssetDetailClientProps {
 export default function AssetDetailClient({ asset, predictions, prices, features, ticker, isWatchingInitial = false }: AssetDetailClientProps) {
     const { t } = useTranslation();
     const { isSignedIn } = useAuth();
+    const { openSignIn } = useClerk();
     const [chartPeriod, setChartPeriod] = useState("1Y");
     const [liveData, setLiveData] = useState<{ price: number, changePercent: number, fetching: boolean } | null>(null);
     const [liveChartData, setLiveChartData] = useState<OHLCData[] | null>(null);
@@ -79,7 +80,7 @@ export default function AssetDetailClient({ asset, predictions, prices, features
 
     const handleToggleWatchlist = () => {
         if (!isSignedIn) {
-            alert("Please sign in to add assets to your watchlist!");
+            openSignIn();
             return;
         }
 

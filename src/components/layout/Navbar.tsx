@@ -12,6 +12,7 @@ import {
     Briefcase,
     Translate,
     SignIn,
+    Star,
 } from "@phosphor-icons/react";
 import { useTranslation } from "@/components/I18nProvider";
 import { SignInButton, SignedIn, SignedOut, UserButton } from '@clerk/nextjs'
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
     { href: "/screener", labelKey: "nav.screener", icon: Funnel },
     { href: "/sectors", labelKey: "nav.sectors", icon: GridFour },
     { href: "/portfolio", labelKey: "nav.portfolio", icon: Briefcase },
+    { href: "/watchlist", labelKey: "nav.watchlist", icon: Star },
 ] as const;
 
 export default function Navbar() {

@@ -6,6 +6,7 @@ export const DICT: Record<"en" | "fr", Record<string, string>> = {
         "nav.screener": "Screener",
         "nav.sectors": "Sectors",
         "nav.portfolio": "Portfolio",
+        "nav.watchlist": "Watchlist",
         "nav.legal": "Legal",
         "app.name": "BotBourse",
 
@@ -94,6 +95,14 @@ export const DICT: Record<"en" | "fr", Record<string, string>> = {
         "market.top.gainers": "Top Gainers",
         "market.top.losers": "Top Losers",
 
+        // Watchlist
+        "watch.title": "Watchlist",
+        "watch.subtitle": "Tracking {{count}} favorite assets.",
+        "watch.empty.title": "Your Watchlist is Empty",
+        "watch.empty.desc": "Click the star icon on any asset's detail page to add it here.",
+        "watch.login.title": "Sign In Required",
+        "watch.login.desc": "Create an account or sign in to save assets to your personalized watchlist.",
+
         // Predictions
         "preds.title": "Model Room",
         "preds.subtitle": "{{predCount}} predictions across {{assetCount}} assets and 3 time horizons.",
@@ -178,6 +187,7 @@ export const DICT: Record<"en" | "fr", Record<string, string>> = {
         "nav.screener": "Screener",
         "nav.sectors": "Secteurs",
         "nav.portfolio": "Portefeuille",
+        "nav.watchlist": "Favoris",
         "nav.legal": "Mentions Légales",
         "app.name": "BotBourse",
 
@@ -266,6 +276,14 @@ export const DICT: Record<"en" | "fr", Record<string, string>> = {
         "market.empty.desc": "Essayez d'ajuster vos filtres ou votre recherche.",
         "market.top.gainers": "Plus Fortes Hausses",
         "market.top.losers": "Plus Fortes Baisses",
+
+        // Watchlist
+        "watch.title": "Favoris",
+        "watch.subtitle": "{{count}} actifs suivis.",
+        "watch.empty.title": "Votre liste de favoris est vide",
+        "watch.empty.desc": "Cliquez sur l'icône étoile sur la page d'un actif pour l'ajouter ici.",
+        "watch.login.title": "Connexion Requise",
+        "watch.login.desc": "Créez un compte ou connectez-vous pour enregistrer des actifs dans vos favoris.",
 
         // Predictions
         "preds.title": "Salle des Modèles",
