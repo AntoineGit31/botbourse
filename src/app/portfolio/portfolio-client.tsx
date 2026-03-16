@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
     Briefcase,
@@ -41,74 +41,89 @@ interface PortfolioItem {
     weight: number; // 0 to 1
 }
 
+import { saveUserPortfolio } from "../actions/portfolio";
+
+interface DbPortfolioItem {
+    ticker: string;
+    shares: number;
+}
+
 interface PortfolioClientProps {
     screenerData: Record<string, unknown>[];
+    initialDbPortfolio?: DbPortfolioItem[] | null;
 }
 
 // ─── Component ───
 
-export default function PortfolioClient({ screenerData }: PortfolioClientProps) {
+export default function PortfolioClient({ screenerData, initialDbPortfolio }: PortfolioClientProps) {
     const assets = screenerData as unknown as ScreenerItem[];
     const { t } = useTranslation();
 
     // State
     const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
-    const [capital, setCapital] = useState<number>(100000);
     const [searchQuery, setSearchQuery] = useState("");
     const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [initialLoadDone, setInitialLoadDone] = useState(false);
 
-    // Load from local storage on mount
+    // Load Data
     useEffect(() => {
-        const saved = localStorage.getItem("botbourse_portfolio");
-        if (saved) {
-            try {
-                const parsed = JSON.parse(saved);
-                if (parsed.capital) setCapital(parsed.capital);
-                if (parsed.items && Array.isArray(parsed.items)) {
-                    // Match with loaded asset data to get latest prices/predictions
-                    const matchedItems = parsed.items.map((pi: any) => {
-                        const asset = assets.find(a => a.ticker === pi.ticker);
-                        return asset ? { asset, shares: pi.shares, weight: 0 } : null;
-                    }).filter(Boolean) as PortfolioItem[];
-                    setPortfolio(matchedItems);
-                }
-            } catch (e) {
-                console.error("Failed to parse portfolio", e);
+        if (initialDbPortfolio && initialDbPortfolio.length > 0) {
+            // Load from database if available
+            const matchedItems = initialDbPortfolio.map(pi => {
+                const asset = assets.find(a => a.ticker === pi.ticker);
+                return asset ? { asset, shares: pi.shares, weight: 0 } : null;
+            }).filter(Boolean) as PortfolioItem[];
+            setPortfolio(matchedItems);
+        } else {
+            // Fallback to local storage (unregistered users, or empty DB)
+            const saved = localStorage.getItem("botbourse_portfolio");
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    if (parsed.items && Array.isArray(parsed.items)) {
+                        const matchedItems = parsed.items.map((pi: any) => {
+                            const asset = assets.find(a => a.ticker === pi.ticker);
+                            return asset ? { asset, shares: pi.shares, weight: 0 } : null;
+                        }).filter(Boolean) as PortfolioItem[];
+                        setPortfolio(matchedItems);
+                    }
+                } catch (e) { }
             }
         }
-    }, [assets]);
+        setInitialLoadDone(true);
+    }, [assets, initialDbPortfolio]);
 
-    // Save to local storage when portfolio changes
+    // Save Data (Local + DB Sync)
     useEffect(() => {
-        const toSave = {
-            capital,
-            items: portfolio.map(p => ({ ticker: p.asset.ticker, shares: p.shares }))
-        };
-        localStorage.setItem("botbourse_portfolio", JSON.stringify(toSave));
-    }, [portfolio, capital]);
+        if (!initialLoadDone) return;
+        
+        const items = portfolio.map(p => ({ ticker: p.asset.ticker, shares: p.shares }));
+        localStorage.setItem("botbourse_portfolio", JSON.stringify({ items }));
 
-    // Compute weights based on shares and prices
-    const totalValue = useMemo(() => {
+        // Debounced Save to DB (if logged in, initialDbPortfolio !== undefined)
+        if (initialDbPortfolio !== null && initialDbPortfolio !== undefined) {
+            const timeout = setTimeout(() => {
+                saveUserPortfolio(items).catch(console.error);
+            }, 1000);
+            return () => clearTimeout(timeout);
+        }
+    }, [portfolio, initialLoadDone, initialDbPortfolio]);
+
+    // Compute dynamic capital based on current holdings
+    const dynamicCapital = useMemo(() => {
         return portfolio.reduce((sum, item) => sum + (item.asset.price * item.shares), 0);
     }, [portfolio]);
 
-    const cashValue = Math.max(0, capital - totalValue);
-
     const portfolioWithWeights = useMemo(() => {
-        // We calculate weights relative to total invested value OR total capital (including cash)
-        // Let's use weights relative to total capital for the overall allocation
         return portfolio.map(item => ({
             ...item,
-            weight: capital > 0 ? (item.asset.price * item.shares) / capital : 0
+            weight: dynamicCapital > 0 ? (item.asset.price * item.shares) / dynamicCapital : 0
         })).sort((a, b) => b.weight - a.weight);
-    }, [portfolio, capital]);
+    }, [portfolio, dynamicCapital]);
 
     // Aggregate Metrics
     const metrics = useMemo(() => {
         if (portfolioWithWeights.length === 0) return null;
-
-        // Weights summing to 1 for just the invested portion (ignoring cash)
-        const totalInvestedWeight = portfolioWithWeights.reduce((sum, item) => sum + item.weight, 0);
 
         let avgRisk = 0;
         let expected30d = 0;
@@ -118,30 +133,25 @@ export default function PortfolioClient({ screenerData }: PortfolioClientProps) 
         const regionCounts: Record<string, number> = {};
         const typeCounts: Record<string, number> = {};
 
-        if (totalInvestedWeight > 0) {
-            for (const item of portfolioWithWeights) {
-                // Normalize weight within the invested portion
-                const relWeight = item.weight / totalInvestedWeight;
+        for (const item of portfolioWithWeights) {
+            const relWeight = item.weight; // weights already sum to 1
 
-                avgRisk += item.asset.riskScore * relWeight;
-                expected30d += item.asset.shortReturn * relWeight;
-                expected12m += item.asset.mediumReturn * relWeight;
+            avgRisk += item.asset.riskScore * relWeight;
+            expected30d += item.asset.shortReturn * relWeight;
+            expected12m += item.asset.mediumReturn * relWeight;
 
-                sectorCounts[item.asset.sector] = (sectorCounts[item.asset.sector] || 0) + relWeight;
-                regionCounts[item.asset.region] = (regionCounts[item.asset.region] || 0) + relWeight;
-                typeCounts[item.asset.assetType] = (typeCounts[item.asset.assetType] || 0) + relWeight;
-            }
+            sectorCounts[item.asset.sector] = (sectorCounts[item.asset.sector] || 0) + relWeight;
+            regionCounts[item.asset.region] = (regionCounts[item.asset.region] || 0) + relWeight;
+            typeCounts[item.asset.assetType] = (typeCounts[item.asset.assetType] || 0) + relWeight;
         }
 
-        // Diversification Score (0-10)
-        // Better score if many sectors, mix of stock/etf, global presence
         const numSectors = Object.keys(sectorCounts).length;
         const maxSectorWeight = Math.max(...Object.values(sectorCounts), 0);
         let divScore = 5;
         if (numSectors >= 5) divScore += 2;
         else if (numSectors === 1) divScore -= 2;
 
-        if (maxSectorWeight > 0.5) divScore -= 1; // Penalty for >50% in one sector
+        if (maxSectorWeight > 0.5) divScore -= 1;
         if (maxSectorWeight < 0.25) divScore += 1;
 
         if (typeCounts["etf"] && typeCounts["etf"] > 0.1) divScore += 1;
@@ -150,7 +160,7 @@ export default function PortfolioClient({ screenerData }: PortfolioClientProps) 
         divScore = Math.max(1, Math.min(10, Math.round(divScore)));
 
         return {
-            investedPct: totalInvestedWeight,
+            investedPct: 1, // Full invested assumption without cash drag
             avgRisk,
             expected30d,
             expected12m,
@@ -171,9 +181,7 @@ export default function PortfolioClient({ screenerData }: PortfolioClientProps) 
 
     // Handlers
     const addAsset = (asset: ScreenerItem) => {
-        // Default to adding whatever shares equals approx 10% of capital, or 1 share min
-        const targetValue = capital * 0.1;
-        const shares = Math.max(1, Math.floor(targetValue / asset.price));
+        const shares = 1; // Default to 1 share, user can adjust
         setPortfolio([...portfolio, { asset, shares, weight: 0 }]);
         setSearchQuery("");
         setIsSearchOpen(false);
@@ -190,15 +198,20 @@ export default function PortfolioClient({ screenerData }: PortfolioClientProps) 
         ));
     };
 
-    const updateWeight = (ticker: string, targetWeightPct: number) => {
-        if (targetWeightPct < 0 || targetWeightPct > 100) return;
-        const targetValue = capital * (targetWeightPct / 100);
-        const item = portfolio.find(p => p.asset.ticker === ticker);
-        if (item) {
-            const newShares = Math.max(0, Math.floor(targetValue / item.asset.price));
-            updateShares(ticker, newShares);
-        }
+    const updateAmount = (ticker: string, amount: number) => {
+        if (amount < 0) return;
+        setPortfolio(portfolio.map(p => {
+            if (p.asset.ticker === ticker) {
+                // Determine shares needed for this exact dollar amount
+                // Allow floating shares or round to 4 decimals for precision
+                const shares = Number((amount / p.asset.price).toFixed(4));
+                return { ...p, shares };
+            }
+            return p;
+        }));
     };
+
+    if (!initialLoadDone) return null; // Avoid hydration mismatch
 
     return (
         <div className="px-4 sm:px-6 py-8 md:py-12" style={{ maxWidth: "var(--container-max)", margin: "0 auto" }}>
@@ -216,19 +229,14 @@ export default function PortfolioClient({ screenerData }: PortfolioClientProps) 
                     </p>
                 </div>
 
-                <div className="flex flex-col items-end">
-                    <label className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>{t("port.capital")}</label>
-                    <div className="flex items-center" style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: "8px", overflow: "hidden" }}>
-                        <span className="px-3 text-sm num" style={{ color: "var(--text-muted)" }}>$</span>
-                        <input
-                            type="number"
-                            value={capital}
-                            onChange={(e) => setCapital(Math.max(100, Number(e.target.value)))}
-                            className="bg-transparent py-1.5 w-28 outline-none text-sm num font-medium"
-                            style={{ color: "var(--text-primary)" }}
-                        />
+                {dynamicCapital > 0 && (
+                    <div className="flex flex-col items-end">
+                        <label className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>{t("port.capital")} Total</label>
+                        <div className="text-2xl font-bold num" style={{ color: "var(--text-primary)" }}>
+                            {formatPrice(dynamicCapital)}
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -312,14 +320,14 @@ export default function PortfolioClient({ screenerData }: PortfolioClientProps) 
                                         color: "var(--text-muted)",
                                         borderBottom: "1px solid var(--border)",
                                         background: "var(--bg-elevated)",
-                                        gridTemplateColumns: "20px 2fr 1fr 1fr 1fr 1fr 1.5fr",
+                                        gridTemplateColumns: "20px 2fr 1fr 1fr 1fr 1fr .8fr",
                                     }}>
                                     <div></div>
                                     <div>{t("port.table.asset")}</div>
                                     <div className="text-right">{t("port.table.price")}</div>
                                     <div className="text-right">{t("port.table.shares")}</div>
-                                    <div className="text-right">{t("port.table.value")}</div>
-                                    <div className="text-right">{t("port.table.target_wgt")}</div>
+                                    <div className="text-right">Montant Investi ($)</div>
+                                    <div className="text-right">Allocation (%)</div>
                                     <div className="text-right">{t("port.table.12m")}</div>
                                 </div>
 
@@ -329,7 +337,7 @@ export default function PortfolioClient({ screenerData }: PortfolioClientProps) 
                                         <div key={item.asset.ticker} className="grid items-center gap-2 px-4 py-3 stagger-item"
                                             style={{
                                                 "--index": i,
-                                                gridTemplateColumns: "20px 2fr 1fr 1fr 1fr 1fr 1.5fr",
+                                                gridTemplateColumns: "20px 2fr 1fr 1fr 1fr 1fr .8fr",
                                             } as React.CSSProperties}>
 
                                             {/* Remove */}
@@ -339,7 +347,7 @@ export default function PortfolioClient({ screenerData }: PortfolioClientProps) 
 
                                             {/* Asset */}
                                             <div className="min-w-0">
-                                                <Link href={`/asset/${item.asset.ticker}`} className="flex items-center gap-1.5 hover:underline">
+                                                <Link href={`/asset/${item.asset.ticker}`} className="flex items-center gap-1.5 hover:underline" prefetch={false}>
                                                     <span className="text-sm font-semibold num" style={{ color: "var(--text-primary)" }}>{item.asset.ticker}</span>
                                                     <span className="text-[10px] px-1 py-0.5 rounded uppercase" style={{ background: "var(--bg-elevated)", color: "var(--text-muted)" }}>{item.asset.assetType}</span>
                                                 </Link>
@@ -357,60 +365,38 @@ export default function PortfolioClient({ screenerData }: PortfolioClientProps) 
                                                     type="number"
                                                     value={item.shares}
                                                     onChange={(e) => updateShares(item.asset.ticker, Number(e.target.value))}
-                                                    className="w-16 text-right px-2 py-1 bg-transparent rounded border outline-none text-xs num"
+                                                    step="0.01"
+                                                    className="w-16 text-right px-2 py-1 bg-transparent rounded border outline-none text-xs num transition-colors hover:border-white/30 focus:border-white/50"
                                                     style={{ borderColor: "var(--border)", color: "var(--text-primary)", background: "var(--bg-elevated)" }}
                                                 />
                                             </div>
 
-                                            {/* Total Value & Read-only Weight */}
-                                            <div className="text-right text-xs num font-medium">
-                                                {formatPrice(item.asset.price * item.shares)}
-                                                <div className="text-[10px] mt-0.5" style={{ color: "var(--text-muted)" }}>
-                                                    {(item.weight * 100).toFixed(1)}% {t("port.table.act")}
-                                                </div>
-                                            </div>
-
-                                            {/* Target Weight Input */}
+                                            {/* Amount Input */}
                                             <div className="flex justify-end items-center gap-1">
+                                                <span className="text-xs text-muted">$</span>
                                                 <input
                                                     type="number"
-                                                    value={Math.round(item.weight * 100)}
-                                                    onChange={(e) => updateWeight(item.asset.ticker, Number(e.target.value))}
-                                                    className="w-14 text-right px-2 py-1 bg-transparent rounded border outline-none text-xs num"
-                                                    style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}
+                                                    value={Math.round(item.asset.price * item.shares * 100) / 100}
+                                                    onChange={(e) => updateAmount(item.asset.ticker, Number(e.target.value))}
+                                                    className="w-20 text-right px-2 py-1 bg-transparent rounded border outline-none text-xs num font-medium transition-colors hover:border-white/30 focus:border-white/50"
+                                                    style={{ borderColor: "var(--border)", color: "var(--accent)" }}
                                                 />
-                                                <span className="text-xs text-muted">%</span>
+                                            </div>
+
+                                            {/* Read-only Weight */}
+                                            <div className="text-right text-xs num font-medium" style={{ color: "var(--text-primary)" }}>
+                                                {(item.weight * 100).toFixed(1)}%
                                             </div>
 
                                             {/* 12m Signal */}
                                             <div className="text-right flex flex-col items-end gap-1">
                                                 <div className="flex items-center gap-1.5">
                                                     <TrendBadge trend={item.asset.mediumTrend as any} />
-                                                    <span className="text-xs num font-medium" style={{ color: item.asset.mediumReturn >= 0 ? "var(--accent)" : "var(--negative)" }}>
-                                                        {formatReturn(item.asset.mediumReturn)}
-                                                    </span>
                                                 </div>
                                             </div>
 
                                         </div>
                                     ))}
-
-                                    {/* Cash Row */}
-                                    <div className="grid items-center gap-2 px-4 py-3 bg-[var(--bg-elevated)] opacity-80"
-                                        style={{ gridTemplateColumns: "20px 2fr 1fr 1fr 1fr 1fr 1.5fr" }}>
-                                        <div></div>
-                                        <div className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{t("port.table.cash")}</div>
-                                        <div className="text-right text-xs num">$1.00</div>
-                                        <div className="text-right text-xs num">{Math.round(cashValue).toLocaleString()}</div>
-                                        <div className="text-right text-xs num font-medium">
-                                            {formatPrice(cashValue)}
-                                            <div className="text-[10px] mt-0.5" style={{ color: "var(--text-muted)" }}>
-                                                {((cashValue / capital) * 100).toFixed(1)}% {t("port.table.act")}
-                                            </div>
-                                        </div>
-                                        <div className="text-right text-xs text-muted">—</div>
-                                        <div className="text-right text-xs text-muted">—</div>
-                                    </div>
                                 </div>
                             </div>
                         )}
@@ -445,7 +431,9 @@ export default function PortfolioClient({ screenerData }: PortfolioClientProps) 
                                             width: `${Math.min(100, Math.max(0, (metrics.expected12m + 0.1) * 500))}%`
                                         }} />
                                     </div>
-                                    <div className="text-[10px] text-right mt-1 opacity-70">{t("port.analysis.cash_drag")} {formatReturn(metrics.expected12m * (1 - metrics.investedPct))}</div>
+                                    <div className="text-[10px] text-right mt-1 opacity-70">
+                                        Sur la base des {portfolio.length} actions sélectionnées
+                                    </div>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-3">

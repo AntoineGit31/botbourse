@@ -18,3 +18,14 @@ model WatchlistItem {
 
   @@unique([userId, ticker])
 }
+
+model PortfolioItem {
+  id        String   @id @default(cuid())
+  userId    String
+  ticker    String
+  shares    Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, ticker])
+}

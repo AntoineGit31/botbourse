@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import { getScreenerData } from "@/lib/data";
 import PortfolioClient from "./portfolio-client";
+import { getUserPortfolio } from "../actions/portfolio";
 
 export const metadata: Metadata = {
     title: "Portfolio Simulator",
@@ -11,5 +12,6 @@ export const dynamic = "force-dynamic";
 
 export default async function PortfolioPage() {
     const screenerData = await getScreenerData();
-    return <PortfolioClient screenerData={screenerData} />;
+    const dbPortfolio = await getUserPortfolio();
+    return <PortfolioClient screenerData={screenerData} initialDbPortfolio={dbPortfolio} />;
 }
