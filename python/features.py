@@ -19,7 +19,7 @@ except ImportError:
     HAS_TA = False
     print("[!] 'ta' library not found. Install with: pip install ta")
 
-from config import ALL_TICKERS, STOCKS, ETFS, PRICES_DIR, FEATURES_DIR, DATA_DIR, safe_ticker_filename
+from config import ALL_TICKERS, STOCKS, ETFS, MACRO_TICKERS, PRICES_DIR, FEATURES_DIR, DATA_DIR, safe_ticker_filename
 
 
 def compute_features(df: pd.DataFrame) -> pd.DataFrame:
@@ -173,8 +173,8 @@ def get_latest_features(df: pd.DataFrame) -> dict:
     return result
 
 
-def add_external_features(latest: dict, ticker: str, sentiment_data: dict, macro_data: dict) -> dict:
-    """Inject sentiment and macro variables into the latest features dict."""
+def add_external_features(latest: dict, ticker: str, sentiment_data: dict, macro_data: dict, assets_map: dict = None) -> dict:
+    """Inject sentiment, macro, interaction, and fundamental features."""
     if not latest:
         return latest
     
@@ -185,6 +185,28 @@ def add_external_features(latest: dict, ticker: str, sentiment_data: dict, macro
     latest["macro_vix"] = macro_data.get("^VIX_close")
     latest["macro_tnx"] = macro_data.get("^TNX_close")
     latest["macro_gold"] = macro_data.get("GC=F_close")
+    
+    # Interaction features
+    rsi = latest.get("rsi_14") or 50
+    vix = latest.get("macro_vix") or 20
+    vol20 = latest.get("volatility_20d") or 0.25
+    vol_ratio = latest.get("volume_ratio") or 1.0
+    latest["rsi_x_vix"] = rsi * vix / 100.0
+    latest["vol_x_volume"] = vol20 * vol_ratio
+    
+    # Market-relative momentum
+    market_ret = macro_data.get("market_return_20d", 0) or 0
+    latest["momentum_vs_market"] = (latest.get("return_20d") or 0) - market_ret
+    latest["sector_momentum"] = 0  # Requires cross-sectional data
+    
+    # Fundamental features from assets.json
+    if assets_map:
+        asset_data = assets_map.get(ticker, {})
+        latest["pe_ratio"] = asset_data.get("peRatio") or 0
+        latest["dividend_yield"] = asset_data.get("dividendYield") or 0
+    else:
+        latest["pe_ratio"] = 0
+        latest["dividend_yield"] = 0
     
     return latest
 
@@ -381,13 +403,36 @@ def run_features():
     # Load Macro Data
     macro_data = {}
     for mt in MACRO_TICKERS:
-        safe_mt = mt.replace(".", "_").replace("^", "")
+        safe_mt = safe_ticker_filename(mt)
         mt_file = PRICES_DIR / f"{safe_mt}.json"
         if mt_file.exists():
             with open(mt_file, "r") as f:
                 records = json.load(f)
                 if records:
                     macro_data[f"{mt}_close"] = records[-1]["close"]
+    
+    # Load market return for momentum_vs_market
+    for spy in ["SPY", "VOO"]:
+        spy_file = PRICES_DIR / f"{spy}.json"
+        if spy_file.exists():
+            with open(spy_file, "r") as f:
+                spy_records = json.load(f)
+                if len(spy_records) >= 20:
+                    spy_close_now = spy_records[-1]["close"]
+                    spy_close_20 = spy_records[-20]["close"]
+                    macro_data["market_return_20d"] = (spy_close_now - spy_close_20) / spy_close_20
+            break
+
+    # Load assets for fundamentals
+    assets_map = {}
+    assets_path = DATA_DIR / "assets.json"
+    if assets_path.exists():
+        with open(assets_path) as f:
+            try:
+                for a in json.load(f):
+                    assets_map[a.get("ticker", "")] = a
+            except Exception:
+                pass
 
     all_predictions = []
     watchlist = []
@@ -420,7 +465,7 @@ def run_features():
 
         # Extract latest features
         latest = get_latest_features(df_feat)
-        latest = add_external_features(latest, ticker, sentiment_data, macro_data)
+        latest = add_external_features(latest, ticker, sentiment_data, macro_data, assets_map)
 
         # Save features
         _write_json(FEATURES_DIR / f"{safe_ticker}.json", latest)
