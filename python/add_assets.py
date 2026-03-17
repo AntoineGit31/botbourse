@@ -2,13 +2,14 @@ import pandas as pd
 import json
 
 import requests
+import io
 
 def fetch_table(url, table_index=0, symbol_col='Symbol', name_col='Security', sector_col='GICS Sector', suffix='', region='US', exchange='US'):
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
         resp = requests.get(url, headers=headers)
         resp.raise_for_status()
-        req = pd.read_html(resp.text)
+        req = pd.read_html(io.StringIO(resp.text))
         df = req[table_index]
         res = {}
         for _, row in df.iterrows():
@@ -38,15 +39,15 @@ def main():
     print(f"Got {len(sp500)} S&P 500")
 
     print("Fetching S&P MidCap 400...")
-    mid400 = fetch_table('https://en.wikipedia.org/wiki/List_of_S%26P_400_companies', 0, 'Ticker symbol', 'Company', 'GICS Sector', '', 'US', 'US')
+    mid400 = fetch_table('https://en.wikipedia.org/wiki/List_of_S%26P_400_companies', 0, 'Symbol', 'Security', 'GICS Sector', '', 'US', 'US')
     print(f"Got {len(mid400)} S&P 400")
 
     print("Fetching S&P SmallCap 600...")
-    small600 = fetch_table('https://en.wikipedia.org/wiki/List_of_S%26P_600_companies', 0, 'Ticker symbol', 'Company', 'GICS Sector', '', 'US', 'US')
+    small600 = fetch_table('https://en.wikipedia.org/wiki/List_of_S%26P_600_companies', 0, 'Symbol', 'Security', 'GICS Sector', '', 'US', 'US')
     print(f"Got {len(small600)} S&P 600")
 
     print("Fetching TSX 60 (Canada)...")
-    tsx60 = fetch_table('https://en.wikipedia.org/wiki/S%26P/TSX_60', 0, 'Symbol', 'Company', 'Sector', '.TO', 'Americas', 'TSX')
+    tsx60 = fetch_table('https://en.wikipedia.org/wiki/S%26P/TSX_60', 1, 'Symbol', 'Company', 'Sector', '.TO', 'Americas', 'TSX')
     print(f"Got {len(tsx60)} TSX 60")
 
     print("Fetching DAX (Germany)...")
@@ -56,6 +57,26 @@ def main():
     print("Fetching CAC 40 (France)...")
     cac = fetch_table('https://en.wikipedia.org/wiki/CAC_40', 4, 'Ticker', 'Company', 'Sector', '.PA', 'Europe', 'Euronext Paris')
     print(f"Got {len(cac)} CAC 40")
+    
+    print("Fetching Russell 1000 (US)...")
+    russell1000 = fetch_table('https://en.wikipedia.org/wiki/Russell_1000_Index', 3, 'Symbol', 'Company', 'GICS Sector', '', 'US', 'US')
+    print(f"Got {len(russell1000)} Russell 1000")
+
+    print("Fetching NASDAQ 100 (US)...")
+    nasdaq100 = fetch_table('https://en.wikipedia.org/wiki/Nasdaq-100', 4, 'Ticker', 'Company', 'GICS Sector', '', 'US', 'NASDAQ')
+    print(f"Got {len(nasdaq100)} NASDAQ 100")
+
+    print("Fetching FTSE 100 (UK)...")
+    ftse100 = fetch_table('https://en.wikipedia.org/wiki/FTSE_100_Index', 6, 'Ticker', 'Company', 'FTSE industry classification benchmark sector[38]', '.L', 'Europe', 'LSE')
+    print(f"Got {len(ftse100)} FTSE 100")
+
+    print("Fetching AEX (Netherlands)...")
+    aex = fetch_table('https://en.wikipedia.org/wiki/AEX_index', 3, 'Ticker', 'Company', 'ICB Sector', '.AS', 'Europe', 'Euronext Amsterdam')
+    print(f"Got {len(aex)} AEX")
+
+    print("Fetching BSE SENSEX (India)...")
+    sensex = fetch_table('https://en.wikipedia.org/wiki/BSE_SENSEX', 2, 'Symbol', 'Company', 'Industry', '.BO', 'Asia', 'BSE')
+    print(f"Got {len(sensex)} BSE SENSEX")
     
     # ── BIG ETF LIST MANUALLY DEFINED ──
     more_etfs = {
@@ -122,7 +143,7 @@ def main():
     }
 
     all_extra_stocks = {}
-    for dic in [sp500, mid400, small600, tsx60, dax, cac, cryptos]:
+    for dic in [sp500, mid400, small600, tsx60, dax, cac, russell1000, nasdaq100, ftse100, aex, sensex, cryptos]:
         all_extra_stocks.update(dic)
 
     with open('c:/Users/Antoine/Desktop/BotBourse/python/extra_universe.py', 'w', encoding='utf-8') as f:

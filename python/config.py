@@ -109,6 +109,7 @@ STOCKS = {
     "RMS.PA":    {"name": "Hermes International", "sector": "Consumer", "region": "Europe", "exchange": "Euronext Paris"},
     "EL.PA":     {"name": "EssilorLuxottica SA", "sector": "Healthcare", "region": "Europe", "exchange": "Euronext Paris"},
     "SAF.PA":    {"name": "Safran SA", "sector": "Industrials", "region": "Europe", "exchange": "Euronext Paris"},
+    "ITP.PA":    {"name": "Interparfums", "sector": "Consumer", "region": "Europe", "exchange": "Euronext Paris"},
 
     # ══════════════════════════════════════════
     #  Germany — DAX (~15)
