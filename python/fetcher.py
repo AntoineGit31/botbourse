@@ -16,10 +16,20 @@ import pandas as pd
 import numpy as np
 
 from config import (
-    STOCKS, ETFS, INDICES, ALL_TICKERS,
+    STOCKS, ETFS, MACRO_TICKERS, INDICES, ALL_TICKERS,
     DATA_DIR, PRICES_DIR,
     HISTORY_PERIOD,
+    safe_ticker_filename,
 )
+
+import os
+
+try:
+    from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+    vader = SentimentIntensityAnalyzer()
+    HAS_VADER = True
+except ImportError:
+    HAS_VADER = False
 
 
 def fetch_asset_info(ticker: str, meta: dict, asset_type: str) -> dict:
@@ -163,6 +173,10 @@ def run_fetcher():
     assets = []
 
     for ticker, meta in STOCKS.items():
+        if os.path.exists(DATA_DIR / "assets.json") and len(assets) > 0:
+            pass # We fetch them all anyway, it's fast enough without threading
+
+    for ticker, meta in STOCKS.items():
         print(f"  Fetching {ticker}...")
         asset = fetch_asset_info(ticker, meta, "stock")
         assets.append(asset)
@@ -174,32 +188,73 @@ def run_fetcher():
         assets.append(asset)
         time.sleep(0.5)
 
+    for ticker, meta in MACRO_TICKERS.items():
+        print(f"  Fetching {ticker}...")
+        asset = fetch_asset_info(ticker, meta, "macro")
+        assets.append(asset)
+        time.sleep(0.5)
+
     _write_json(DATA_DIR / "assets.json", assets)
     print(f"  -> {len(assets)} assets saved\n")
+
+    # ── 2.5 Fetch Sentiment (Top Assets Only for speed) ──
+    print("[2.5/3] Fetching news sentiment for major assets...")
+    sentiment_data = {}
+    if HAS_VADER:
+        top_stocks = list(STOCKS.keys())[:200]
+        for tkr in top_stocks:
+            try:
+                stock_yf = yf.Ticker(tkr)
+                news = stock_yf.news[:5]
+                if news:
+                    score = 0
+                    for article in news:
+                        title = article.get("content", {}).get("title", "")
+                        summary = article.get("content", {}).get("summary", "")
+                        text = f"{title}. {summary}"
+                        s = vader.polarity_scores(text)["compound"]
+                        score += s
+                    sentiment_data[tkr] = round(score / len(news), 3)
+            except Exception:
+                pass
+            time.sleep(0.1)
+    
+    _write_json(DATA_DIR / "sentiment.json", sentiment_data)
+    print(f"  -> {len(sentiment_data)} sentiment scores saved\n")
 
     # ── 3. Fetch price history ──
     print("[3/3] Fetching price history (this may take a few minutes)...")
     success = 0
     errors = 0
+    skipped = 0
 
+    now_ts = time.time()
     for ticker in ALL_TICKERS:
+        safe_ticker = safe_ticker_filename(ticker)
+        price_file = PRICES_DIR / f"{safe_ticker}.json"
+
+        # Auto-resume logic: Skip if file was modified in the last 12 hours
+        if price_file.exists():
+            mtime = os.path.getmtime(price_file)
+            if now_ts - mtime < 12 * 3600:
+                skipped += 1
+                continue
+
         print(f"  Fetching prices for {ticker}...", end=" ")
         df = fetch_prices(ticker)
 
         if not df.empty:
-            # Save as JSON array
-            safe_ticker = ticker.replace(".", "_").replace("^", "")
             records = df.round(4).to_dict(orient="records")
-            _write_json(PRICES_DIR / f"{safe_ticker}.json", records)
+            _write_json(price_file, records)
             print(f"({len(records)} days)")
             success += 1
         else:
             print("SKIPPED")
             errors += 1
 
-        time.sleep(0.5)  # Rate limit
+        time.sleep(0.5)  # Safe rate limit
 
-    print(f"\n  -> {success} tickers fetched, {errors} errors")
+    print(f"\n  -> {success} fetched newly, {skipped} skipped (up-to-date), {errors} errors")
 
     # ── Save metadata ──
     _write_json(DATA_DIR / "meta.json", {

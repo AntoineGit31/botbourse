@@ -16,7 +16,7 @@ import lightgbm as lgb
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.metrics import accuracy_score, mean_absolute_error
 
-from config import ALL_TICKERS, PRICES_DIR, STOCKS, ETFS
+from config import ALL_TICKERS, PRICES_DIR, STOCKS, ETFS, safe_ticker_filename
 
 MODELS_DIR = Path(__file__).parent / "models"
 MODELS_DIR.mkdir(exist_ok=True)
@@ -41,7 +41,7 @@ FEATURE_COLS = [
 def load_macro_data():
     macro_prices = {}
     for ticker in ["^VIX", "^TNX"]:
-        safe_ticker = ticker.replace(".", "_").replace("^", "")
+        safe_ticker = safe_ticker_filename(ticker)
         price_file = PRICES_DIR / f"{safe_ticker}.json"
         col_name = f"macro_{safe_ticker.lower()}"
         if price_file.exists():
@@ -67,7 +67,7 @@ def build_training_dataset(horizon_days: int) -> pd.DataFrame:
     macro_df = load_macro_data()
 
     for ticker in ALL_TICKERS:
-        safe_ticker = ticker.replace(".", "_").replace("^", "")
+        safe_ticker = safe_ticker_filename(ticker)
         price_file = PRICES_DIR / f"{safe_ticker}.json"
 
         if not price_file.exists():

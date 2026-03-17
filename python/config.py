@@ -876,3 +876,18 @@ HORIZONS = {
 
 # ─── Data Fetch Settings ───
 HISTORY_PERIOD = "5y"  # 5 years of daily data
+
+# ─── Windows-safe filename helper ───
+_WINDOWS_RESERVED = {
+    "CON", "PRN", "AUX", "NUL",
+    "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+    "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+}
+
+def safe_ticker_filename(ticker: str) -> str:
+    """Convert a ticker symbol to a safe filename stem (no extension).
+    Handles dots, carets, and Windows reserved names."""
+    safe = ticker.replace(".", "_").replace("^", "").replace("=", "_")
+    if safe.upper() in _WINDOWS_RESERVED:
+        safe = f"_{safe}"
+    return safe

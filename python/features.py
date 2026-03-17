@@ -19,7 +19,7 @@ except ImportError:
     HAS_TA = False
     print("[!] 'ta' library not found. Install with: pip install ta")
 
-from config import ALL_TICKERS, PRICES_DIR, FEATURES_DIR, DATA_DIR
+from config import ALL_TICKERS, STOCKS, ETFS, PRICES_DIR, FEATURES_DIR, DATA_DIR, safe_ticker_filename
 
 
 def compute_features(df: pd.DataFrame) -> pd.DataFrame:
@@ -391,13 +391,14 @@ def run_features():
 
     all_predictions = []
     watchlist = []
+    missing_data_count = 0
 
     for ticker in ALL_TICKERS:
-        safe_ticker = ticker.replace(".", "_").replace("^", "")
+        safe_ticker = safe_ticker_filename(ticker)
         price_file = PRICES_DIR / f"{safe_ticker}.json"
 
         if not price_file.exists():
-            print(f"  [!] No price data for {ticker}, skipping")
+            missing_data_count += 1
             continue
 
         print(f"  Computing features for {ticker}...", end=" ")
@@ -461,6 +462,7 @@ def run_features():
     # Save predictions
     _write_json(DATA_DIR / "predictions.json", all_predictions)
     print(f"\n  -> {len(all_predictions)} predictions saved")
+    print(f"  -> {missing_data_count} tickers skipped due to missing price data")
 
     # Save watchlist (top 8 most interesting signals)
     watchlist.sort(key=lambda w: abs(

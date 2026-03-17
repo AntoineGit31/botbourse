@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-from config import ALL_TICKERS, STOCKS, ETFS, PRICES_DIR, FEATURES_DIR, DATA_DIR
+from config import ALL_TICKERS, STOCKS, ETFS, PRICES_DIR, FEATURES_DIR, DATA_DIR, safe_ticker_filename
 
 MODELS_DIR = Path(__file__).parent / "models"
 
@@ -63,7 +63,7 @@ def load_models():
 
 def get_latest_features_for_ticker(ticker: str) -> dict | None:
     """Load the latest computed features for a ticker."""
-    safe_ticker = ticker.replace(".", "_").replace("^", "")
+    safe_ticker = safe_ticker_filename(ticker)
     feat_file = FEATURES_DIR / f"{safe_ticker}.json"
 
     if not feat_file.exists():
