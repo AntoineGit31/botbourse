@@ -120,6 +120,15 @@ def compute_features(df: pd.DataFrame) -> pd.DataFrame:
         df["macd_signal"] = df["macd"].ewm(span=9, adjust=False).mean()
         df["macd_histogram"] = df["macd"] - df["macd_signal"]
 
+    # ── Advanced Features ──
+    df["trend_sma_ratio"] = df["sma_50"] / df["sma_200"]
+    if "atr_14" in df.columns:
+        df["atr_normalized"] = df["atr_14"] / df["close"]
+    else:
+        df["atr_normalized"] = (df["high"] - df["low"]).rolling(14).mean() / df["close"]
+    df["time_dt"] = pd.to_datetime(df.get("time", df.index))
+    df["month"] = df["time_dt"].dt.month
+
     return df
 
 
@@ -139,6 +148,7 @@ def get_latest_features(df: pd.DataFrame) -> dict:
         "drawdown", "max_drawdown_1y",
         "volume_ratio",
         "rsi_14", "macd", "macd_signal", "macd_histogram",
+        "trend_sma_ratio", "atr_normalized", "month",
     ]
 
     # Add optional columns
@@ -161,6 +171,22 @@ def get_latest_features(df: pd.DataFrame) -> dict:
     result["last_date"] = latest.get("time", "")
 
     return result
+
+
+def add_external_features(latest: dict, ticker: str, sentiment_data: dict, macro_data: dict) -> dict:
+    """Inject sentiment and macro variables into the latest features dict."""
+    if not latest:
+        return latest
+    
+    # Sentiment
+    latest["news_sentiment"] = sentiment_data.get(ticker)
+    
+    # Macro
+    latest["macro_vix"] = macro_data.get("^VIX_close")
+    latest["macro_tnx"] = macro_data.get("^TNX_close")
+    latest["macro_gold"] = macro_data.get("GC=F_close")
+    
+    return latest
 
 
 def derive_signals(features: dict, ticker: str) -> dict:
@@ -255,6 +281,25 @@ def _compute_horizon_signal(f: dict, horizon: str) -> dict:
 
         total_weight = 3.0
 
+    # ── Macro & Sentiment Overlay ──
+    vix = f.get("macro_vix")
+    sentiment = f.get("news_sentiment")
+    
+    if vix is not None:
+        if vix > 30 and horizon == "short":
+            score -= 1.0  # High fear is bearish short-term
+            risk_score = min(5, f.get("riskScore", 3) + 1)
+        elif vix < 15 and horizon != "short":
+            score += 0.5  # Low fear is structurally bullish
+            
+    if sentiment is not None:
+        if sentiment > 0.2:
+            score += (sentiment * 2)  # Max +2
+            confidence_inputs += 1
+        elif sentiment < -0.2:
+            score += (sentiment * 2)  # Max -2
+            confidence_inputs += 1
+
     # ── Normalize score to expected return ──
     if total_weight > 0:
         normalized = score / total_weight
@@ -319,12 +364,30 @@ def _compute_horizon_signal(f: dict, horizon: str) -> dict:
 
 def run_features():
     """Main feature engineering pipeline."""
-    from config import STOCKS, ETFS
-    all_assets = {**STOCKS, **ETFS}
+    from config import STOCKS, ETFS, MACRO_TICKERS
+    all_assets = {**STOCKS, **ETFS, **MACRO_TICKERS}
 
     print(f"\n{'='*60}")
     print(f"  BotBourse Feature Engineering")
     print(f"{'='*60}\n")
+
+    # Load Sentiment Data
+    sentiment_file = DATA_DIR / "sentiment.json"
+    sentiment_data = {}
+    if sentiment_file.exists():
+        with open(sentiment_file, "r") as f:
+            sentiment_data = json.load(f)
+            
+    # Load Macro Data
+    macro_data = {}
+    for mt in MACRO_TICKERS:
+        safe_mt = mt.replace(".", "_").replace("^", "")
+        mt_file = PRICES_DIR / f"{safe_mt}.json"
+        if mt_file.exists():
+            with open(mt_file, "r") as f:
+                records = json.load(f)
+                if records:
+                    macro_data[f"{mt}_close"] = records[-1]["close"]
 
     all_predictions = []
     watchlist = []
@@ -356,6 +419,7 @@ def run_features():
 
         # Extract latest features
         latest = get_latest_features(df_feat)
+        latest = add_external_features(latest, ticker, sentiment_data, macro_data)
 
         # Save features
         _write_json(FEATURES_DIR / f"{safe_ticker}.json", latest)
@@ -454,6 +518,17 @@ def _generate_explanation(features, signal):
             parts.append(f"RSI at {rsi:.0f} suggests oversold conditions")
         elif rsi > 65:
             parts.append(f"RSI at {rsi:.0f} suggests overbought conditions")
+
+    sentiment = features.get("news_sentiment")
+    if sentiment is not None:
+        if sentiment > 0.2:
+            parts.append("Positive news sentiment detected")
+        elif sentiment < -0.2:
+            parts.append("Negative news sentiment detected")
+
+    vix = features.get("macro_vix")
+    if vix is not None and vix > 25:
+        parts.append("High macroeconomic fear (VIX elevated)")
 
     return ". ".join(parts) + "." if parts else "Signal detected based on technical indicators."
 

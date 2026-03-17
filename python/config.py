@@ -838,12 +838,20 @@ ETFS = {
     "TLT":      {"name": "iShares 20+ Year Treasury Bond", "index_tracked": "ICE US Treasury 20+ Year", "ter": 0.0015, "domicile": "US", "category": "Bond US Long Term", "region": "US", "exchange": "NASDAQ"},
 }
 
+# ── Macro Indicators ──
+MACRO_TICKERS = {
+    "^VIX": {"name": "CBOE Volatility Index", "sector": "Macro", "region": "US", "exchange": "INDEX"},
+    "^TNX": {"name": "10-Year Treasury Yield", "sector": "Macro", "region": "US", "exchange": "INDEX"},
+    "GC=F": {"name": "Gold Futures", "sector": "Macro", "region": "US", "exchange": "COMEX"},
+    "CL=F": {"name": "Crude Oil Futures", "sector": "Macro", "region": "US", "exchange": "NYMEX"},
+}
+
 # Merge the dynamically loaded huge lists into the core maps
 STOCKS.update(EXTRA_STOCKS)
 ETFS.update(EXTRA_ETFS)
 
 # Combined universe
-ALL_TICKERS = list(STOCKS.keys()) + list(ETFS.keys())
+ALL_TICKERS = list(STOCKS.keys()) + list(ETFS.keys()) + list(MACRO_TICKERS.keys())
 
 # ─── Market Indices ───
 INDICES = {

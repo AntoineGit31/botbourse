@@ -28,6 +28,11 @@ FEATURE_COLS = [
     "stoch_k", "adx",
     "volume_ratio",
     "drawdown",
+    "trend_sma_ratio",
+    "atr_normalized",
+    "month",
+    "macro_vix",
+    "macro_tnx",
 ]
 
 

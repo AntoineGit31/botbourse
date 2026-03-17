@@ -31,7 +31,28 @@ FEATURE_COLS = [
     "stoch_k", "adx",
     "volume_ratio",
     "drawdown",
+    "trend_sma_ratio",
+    "atr_normalized",
+    "month",
+    "macro_vix",
+    "macro_tnx",
 ]
+
+def load_macro_data():
+    macro_prices = {}
+    for ticker in ["^VIX", "^TNX"]:
+        safe_ticker = ticker.replace(".", "_").replace("^", "")
+        price_file = PRICES_DIR / f"{safe_ticker}.json"
+        col_name = f"macro_{safe_ticker.lower()}"
+        if price_file.exists():
+            with open(price_file) as f:
+                df = pd.DataFrame(json.load(f))
+                if not df.empty and "time" in df.columns and "close" in df.columns:
+                    df = df.set_index("time")["close"].rename(col_name)
+                    macro_prices[safe_ticker] = df
+    if macro_prices:
+        return pd.concat(macro_prices.values(), axis=1)
+    return pd.DataFrame()
 
 
 def build_training_dataset(horizon_days: int) -> pd.DataFrame:
@@ -42,6 +63,8 @@ def build_training_dataset(horizon_days: int) -> pd.DataFrame:
     and the target is the forward return over the next `horizon_days` days.
     """
     all_frames = []
+    
+    macro_df = load_macro_data()
 
     for ticker in ALL_TICKERS:
         safe_ticker = ticker.replace(".", "_").replace("^", "")
@@ -128,6 +151,28 @@ def build_training_dataset(horizon_days: int) -> pd.DataFrame:
         # Drawdown
         rolling_max = df["close"].cummax()
         df["drawdown"] = (df["close"] - rolling_max) / rolling_max
+
+        # Additional advanced features
+        df["trend_sma_ratio"] = df["sma_50"] / df["sma_200"]
+        df["atr_normalized"] = atr14 / df["close"]
+        df["month"] = pd.to_datetime(df["time"]).dt.month
+        
+        # Merge Macro Features
+        df = df.set_index("time")
+        if not macro_df.empty:
+            df = df.join(macro_df, how="left")
+            if "macro_vix" in df.columns:
+                df["macro_vix"] = df["macro_vix"].ffill().bfill()
+            else:
+                df["macro_vix"] = 20.0
+            if "macro_tnx" in df.columns:
+                df["macro_tnx"] = df["macro_tnx"].ffill().bfill()
+            else:
+                df["macro_tnx"] = 4.0
+        else:
+            df["macro_vix"] = 20.0
+            df["macro_tnx"] = 4.0
+        df = df.reset_index(names="time")
 
         # ── Target: forward return ──
         df["forward_return"] = df["close"].shift(-horizon_days) / df["close"] - 1
