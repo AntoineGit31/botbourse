@@ -47,7 +47,7 @@ export function CurrencyProvider({ children, eurUsdRate }: { children: React.Rea
         }
 
         // Otherwise return natively
-        const symbol = currency === "EUR" ? "€" : currency === "DKK" ? "kr" : "$";
+        const symbol = currency === "EUR" ? "€" : "$";
         return { value, symbol };
     };
 
