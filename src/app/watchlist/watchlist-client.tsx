@@ -3,12 +3,13 @@
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { MagnifyingGlass, Funnel, Star, SignIn } from "@phosphor-icons/react";
-import { formatPrice, formatChangePercent } from "@/lib/utils";
+import { formatPrice as _formatPrice, formatChangePercent } from "@/lib/utils";
 import { REGIONS, SECTORS, ASSET_TYPES } from "@/lib/constants";
 import type { Asset, Region, Sector, AssetType } from "@/lib/types";
 import EmptyState from "@/components/ui/EmptyState";
 import SkeletonRow from "@/components/ui/SkeletonRow";
 import { useTranslation } from "@/components/I18nProvider";
+import { useCurrency } from "@/components/CurrencyProvider";
 import { SignInButton } from "@clerk/nextjs";
 
 interface WatchlistClientProps {
@@ -18,6 +19,7 @@ interface WatchlistClientProps {
 
 export default function WatchlistClient({ initialWatchlist, isSignedIn }: WatchlistClientProps) {
     const { t } = useTranslation();
+    const { formatPrice } = useCurrency();
     const [assets, setAssets] = useState<Asset[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");

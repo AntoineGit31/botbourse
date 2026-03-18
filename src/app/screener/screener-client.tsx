@@ -10,15 +10,16 @@ import {
     Eraser,
 } from "@phosphor-icons/react";
 import {
-    formatPrice,
+    formatPrice as _formatPrice,
     formatChangePercent,
     formatReturn,
-    formatMarketCap,
+    formatMarketCap as _formatMarketCap,
     formatVolume,
 } from "@/lib/utils";
 import TrendBadge from "@/components/ui/TrendBadge";
 import RiskDots from "@/components/ui/RiskDots";
 import { useTranslation } from "@/components/I18nProvider";
+import { useCurrency } from "@/components/CurrencyProvider";
 
 // ─── Types ───
 
@@ -60,6 +61,7 @@ interface ScreenerItem {
     longTrend: string;
     longReturn: number;
     longConfidence: string;
+    currency?: string;
 }
 
 type SortField =
@@ -91,6 +93,7 @@ interface ScreenerClientProps {
 export default function ScreenerClient({ data }: ScreenerClientProps) {
     const items = data as unknown as ScreenerItem[];
     const { t } = useTranslation();
+    const { formatPrice, formatMarketCap } = useCurrency();
 
     // ── Sort state ──
     const [sortField, setSortField] = useState<SortField>("mediumReturn");
@@ -328,7 +331,7 @@ export default function ScreenerClient({ data }: ScreenerClientProps) {
 
                                 {/* Price */}
                                 <div className="text-right text-sm num font-medium" style={{ color: "var(--text-primary)" }}>
-                                    {item.price > 0 ? formatPrice(item.price) : "—"}
+                                    {item.price > 0 ? formatPrice(item.price, item.currency) : "—"}
                                 </div>
 
                                 {/* Change */}

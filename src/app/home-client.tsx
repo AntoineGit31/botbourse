@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { ArrowRight, ChartLineUp, ShieldCheck, Brain, TrendUp, Lightning, TrendDown } from "@phosphor-icons/react";
-import { formatReturn, formatPrice, formatChangePercent } from "@/lib/utils";
+import { formatReturn, formatPrice as _formatPrice, formatChangePercent } from "@/lib/utils";
 import type { Prediction, Asset } from "@/lib/types";
 import TrendBadge from "@/components/ui/TrendBadge";
 import RiskDots from "@/components/ui/RiskDots";
 import { useTranslation } from "@/components/I18nProvider";
+import { useCurrency } from "@/components/CurrencyProvider";
 import { useEffect, useState } from "react";
 
 interface HomeClientProps {
@@ -16,6 +17,7 @@ interface HomeClientProps {
 
 export default function HomeClient({ previewPredictions, marketPulse }: HomeClientProps) {
     const { t } = useTranslation();
+    const { formatPrice } = useCurrency();
     const [activeIndex, setActiveIndex] = useState(0);
 
     // Rotate the featured prediction automatically
@@ -40,7 +42,7 @@ export default function HomeClient({ previewPredictions, marketPulse }: HomeClie
                     {marketPulse.map((asset) => (
                         <div key={`pulse-1-${asset.ticker}`} className="flex items-center gap-2 mx-6">
                             <span className="text-xs font-semibold" style={{ color: "var(--text-secondary)" }}>{asset.ticker}</span>
-                            <span className="text-xs num" style={{ color: "var(--text-primary)" }}>{formatPrice(asset.price)}</span>
+                            <span className="text-xs num" style={{ color: "var(--text-primary)" }}>{formatPrice(asset.price, asset.currency)}</span>
                             <span className="text-xs num font-medium flex items-center gap-0.5" style={{ color: asset.changePercent >= 0 ? "var(--accent)" : "var(--negative)" }}>
                                 {asset.changePercent >= 0 ? <TrendUp weight="bold" /> : <TrendDown weight="bold" />}
                                 {formatChangePercent(asset.changePercent)}
@@ -52,7 +54,7 @@ export default function HomeClient({ previewPredictions, marketPulse }: HomeClie
                     {marketPulse.map((asset) => (
                         <div key={`pulse-2-${asset.ticker}`} className="flex items-center gap-2 mx-6">
                             <span className="text-xs font-semibold" style={{ color: "var(--text-secondary)" }}>{asset.ticker}</span>
-                            <span className="text-xs num" style={{ color: "var(--text-primary)" }}>{formatPrice(asset.price)}</span>
+                            <span className="text-xs num" style={{ color: "var(--text-primary)" }}>{formatPrice(asset.price, asset.currency)}</span>
                             <span className="text-xs num font-medium flex items-center gap-0.5" style={{ color: asset.changePercent >= 0 ? "var(--accent)" : "var(--negative)" }}>
                                 {asset.changePercent >= 0 ? <TrendUp weight="bold" /> : <TrendDown weight="bold" />}
                                 {formatChangePercent(asset.changePercent)}

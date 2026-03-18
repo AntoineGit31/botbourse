@@ -14,10 +14,11 @@ import {
     Target,
     Brain
 } from "@phosphor-icons/react";
-import { formatReturn, formatPrice } from "@/lib/utils";
+import { formatReturn, formatPrice as _formatPrice } from "@/lib/utils";
 import TrendBadge from "@/components/ui/TrendBadge";
 import RiskDots from "@/components/ui/RiskDots";
 import { useTranslation } from "@/components/I18nProvider";
+import { useCurrency } from "@/components/CurrencyProvider";
 
 // ─── Types ───
 
@@ -33,6 +34,7 @@ interface ScreenerItem {
     shortTrend: string;
     mediumReturn: number;
     mediumTrend: string;
+    currency?: string;
 }
 
 interface PortfolioItem {
@@ -58,6 +60,7 @@ interface PortfolioClientProps {
 export default function PortfolioClient({ screenerData, initialDbPortfolio }: PortfolioClientProps) {
     const assets = screenerData as unknown as ScreenerItem[];
     const { t } = useTranslation();
+    const { formatPrice, currency, eurUsdRate } = useCurrency();
 
     // State
     const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
@@ -202,9 +205,14 @@ export default function PortfolioClient({ screenerData, initialDbPortfolio }: Po
         if (amount < 0) return;
         setPortfolio(portfolio.map(p => {
             if (p.asset.ticker === ticker) {
-                // Determine shares needed for this exact dollar amount
-                // Allow floating shares or round to 4 decimals for precision
-                const shares = Number((amount / p.asset.price).toFixed(4));
+                // Determine shares needed for this exact amount (in current currency)
+                // If current currency is EUR and asset is USD, amount is in EUR, so priceInCurrent = p.asset.price / rate
+                const assetCurrency = p.asset.currency || "USD";
+                let priceInDisplay = p.asset.price;
+                if (currency === "EUR" && assetCurrency === "USD") priceInDisplay = p.asset.price / eurUsdRate;
+                if (currency === "USD" && assetCurrency === "EUR") priceInDisplay = p.asset.price * eurUsdRate;
+                
+                const shares = Number((amount / priceInDisplay).toFixed(4));
                 return { ...p, shares };
             }
             return p;
@@ -298,7 +306,7 @@ export default function PortfolioClient({ screenerData, initialDbPortfolio }: Po
                                                     <span className="text-sm font-semibold mr-2">{a.ticker}</span>
                                                     <span className="text-[10px] text-muted">{a.name.substring(0, 15)}</span>
                                                 </div>
-                                                <span className="text-xs num">{formatPrice(a.price)}</span>
+                                                <span className="text-xs num">{formatPrice(a.price, a.currency)}</span>
                                             </button>
                                         ))}
                                     </div>
@@ -326,7 +334,7 @@ export default function PortfolioClient({ screenerData, initialDbPortfolio }: Po
                                     <div>{t("port.table.asset")}</div>
                                     <div className="text-right">{t("port.table.price")}</div>
                                     <div className="text-right">{t("port.table.shares")}</div>
-                                    <div className="text-right">Montant Investi ($)</div>
+                                    <div className="text-right">Montant Investi ({currency === "EUR" ? "€" : "$"})</div>
                                     <div className="text-right">Allocation (%)</div>
                                     <div className="text-right">{t("port.table.12m")}</div>
                                 </div>
@@ -356,7 +364,7 @@ export default function PortfolioClient({ screenerData, initialDbPortfolio }: Po
 
                                             {/* Price */}
                                             <div className="text-right text-xs num">
-                                                {formatPrice(item.asset.price)}
+                                                {formatPrice(item.asset.price, item.asset.currency)}
                                             </div>
 
                                             {/* Shares Input */}
@@ -373,10 +381,16 @@ export default function PortfolioClient({ screenerData, initialDbPortfolio }: Po
 
                                             {/* Amount Input */}
                                             <div className="flex justify-end items-center gap-1">
-                                                <span className="text-xs text-muted">$</span>
+                                                <span className="text-xs text-muted">{currency === "EUR" ? "€" : "$"}</span>
                                                 <input
                                                     type="number"
-                                                    value={Math.round(item.asset.price * item.shares * 100) / 100}
+                                                    value={(() => {
+                                                        const assetCurrency = item.asset.currency || "USD";
+                                                        let priceInDisplay = item.asset.price;
+                                                        if (currency === "EUR" && assetCurrency === "USD") priceInDisplay = item.asset.price / eurUsdRate;
+                                                        if (currency === "USD" && assetCurrency === "EUR") priceInDisplay = item.asset.price * eurUsdRate;
+                                                        return Math.round(priceInDisplay * item.shares * 100) / 100;
+                                                    })()}
                                                     onChange={(e) => updateAmount(item.asset.ticker, Number(e.target.value))}
                                                     className="w-20 text-right px-2 py-1 bg-transparent rounded border outline-none text-xs num font-medium transition-colors hover:border-white/30 focus:border-white/50"
                                                     style={{ borderColor: "var(--border)", color: "var(--accent)" }}

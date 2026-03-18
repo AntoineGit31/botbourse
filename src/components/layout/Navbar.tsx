@@ -15,6 +15,7 @@ import {
     Star,
 } from "@phosphor-icons/react";
 import { useTranslation } from "@/components/I18nProvider";
+import { useCurrency } from "@/components/CurrencyProvider";
 import { SignInButton, SignedIn, SignedOut, UserButton } from '@clerk/nextjs'
 
 const NAV_ITEMS = [
@@ -29,6 +30,7 @@ const NAV_ITEMS = [
 export default function Navbar() {
     const pathname = usePathname();
     const { lang, setLang, t } = useTranslation();
+    const { currency, setCurrency } = useCurrency();
 
     return (
         <nav
@@ -112,6 +114,22 @@ export default function Navbar() {
                     >
                         <Translate size={14} />
                         <span className="uppercase">{lang}</span>
+                    </button>
+
+                    {/* Currency Switch */}
+                    <button
+                        onClick={() => setCurrency(currency === "USD" ? "EUR" : "USD")}
+                        className="flex items-center gap-1.5 text-xs tactile font-medium px-2.5 py-1.5 rounded-lg"
+                        style={{
+                            color: "var(--text-secondary)",
+                            background: "var(--bg-elevated)",
+                            border: "1px solid var(--border)",
+                            transition: "all var(--transition-fast)",
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text-primary)"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-secondary)"; }}
+                    >
+                        <span className="uppercase">{currency === "USD" ? "$" : "€"}</span>
                     </button>
 
                     {/* Legal link */}

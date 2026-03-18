@@ -19,9 +19,7 @@ import {
 } from "@phosphor-icons/react";
 import { CHART_PERIODS } from "@/lib/constants";
 import {
-    formatPrice,
     formatChangePercent,
-    formatMarketCap,
     formatVolume,
     formatReturn,
     getHorizonLabel,
@@ -33,6 +31,7 @@ import TrendBadge from "@/components/ui/TrendBadge";
 import RiskDots from "@/components/ui/RiskDots";
 import PriceChart from "@/components/asset/PriceChart";
 import { useTranslation } from "@/components/I18nProvider";
+import { useCurrency } from "@/components/CurrencyProvider";
 import { toggleWatchlist } from "@/app/actions/watchlist";
 import { useAuth, useClerk } from "@clerk/nextjs";
 
@@ -47,6 +46,7 @@ interface AssetDetailClientProps {
 
 export default function AssetDetailClient({ asset, predictions, prices, features, ticker, isWatchingInitial = false }: AssetDetailClientProps) {
     const { t } = useTranslation();
+    const { formatPrice, formatMarketCap, currency, eurUsdRate } = useCurrency();
     const { isSignedIn } = useAuth();
     const { openSignIn } = useClerk();
     const [chartPeriod, setChartPeriod] = useState("1Y");
@@ -124,8 +124,30 @@ export default function AssetDetailClient({ asset, predictions, prices, features
 
         const targetDateStr = targetDate.toISOString().split("T")[0];
         const filtered = prices.filter((p) => typeof p.time === "string" && p.time >= targetDateStr);
-        return filtered.length > 0 ? filtered : prices.slice(-252);
-    }, [chartPeriod, prices, liveChartData]);
+        const finalPrices = filtered.length > 0 ? filtered : prices.slice(-252);
+
+        // Apply currency conversion to chart data if needed
+        if (currency === "EUR" && asset?.currency === "USD") {
+            return finalPrices.map(p => ({
+                ...p,
+                open: p.open / eurUsdRate,
+                high: p.high / eurUsdRate,
+                low: p.low / eurUsdRate,
+                close: p.close / eurUsdRate,
+            }));
+        }
+        if (currency === "USD" && asset?.currency === "EUR") {
+            return finalPrices.map(p => ({
+                ...p,
+                open: p.open * eurUsdRate,
+                high: p.high * eurUsdRate,
+                low: p.low * eurUsdRate,
+                close: p.close * eurUsdRate,
+            }));
+        }
+
+        return finalPrices;
+    }, [chartPeriod, prices, liveChartData, currency, eurUsdRate, asset?.currency]);
 
     if (!asset) {
         return (
@@ -304,7 +326,7 @@ export default function AssetDetailClient({ asset, predictions, prices, features
                         <div className="grid grid-cols-2 md:grid-cols-4">
                             {asset.assetType === "stock" ? (
                                 <>
-                                    <MetricCell label={t("asset.metric.mcap")} value={asset.marketCap ? formatMarketCap(asset.marketCap) : "—"} />
+                                <MetricCell label={t("asset.metric.mcap")} value={asset.marketCap ? formatMarketCap(asset.marketCap, asset.currency) : "—"} />
                                     <MetricCell label={t("asset.metric.pe")} value={asset.peRatio?.toFixed(1) ?? "—"} />
                                     <MetricCell label={t("asset.metric.div")} value={asset.dividendYield ? `${(asset.dividendYield * 100).toFixed(2)}%` : "—"} />
                                     <MetricCell label={t("asset.metric.vol")} value={asset.volume ? formatVolume(asset.volume) : "—"} />

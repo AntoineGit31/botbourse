@@ -4,6 +4,8 @@ import Navbar from "@/components/layout/Navbar";
 import DisclaimerStrip from "@/components/layout/DisclaimerStrip";
 import Footer from "@/components/layout/Footer";
 import { I18nProvider } from "@/components/I18nProvider";
+import { CurrencyProvider } from "@/components/CurrencyProvider";
+import { getPipelineMeta } from "@/lib/data";
 import { ClerkProvider } from '@clerk/nextjs'
 import "./globals.css";
 
@@ -40,11 +42,14 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const meta = await getPipelineMeta();
+  const eurUsdRate = meta?.eurUsdRate ? Number(meta.eurUsdRate) : 1.08;
+
   return (
     <ClerkProvider>
       <html lang="en" className="dark">
@@ -57,7 +62,8 @@ export default function RootLayout({
           }}
         >
           <I18nProvider>
-            <Navbar />
+            <CurrencyProvider eurUsdRate={eurUsdRate}>
+              <Navbar />
             <DisclaimerStrip />
 
             {/* Main content — offset for fixed nav (52px) + disclaimer (~32px) */}
@@ -71,6 +77,7 @@ export default function RootLayout({
             </main>
 
             <Footer />
+            </CurrencyProvider>
           </I18nProvider>
         </body>
       </html>

@@ -256,12 +256,23 @@ def run_fetcher():
 
     print(f"\n  -> {success} fetched newly, {skipped} skipped (up-to-date), {errors} errors")
 
+    # ── Fetch EUR/USD daily exchange rate ──
+    print("[4/4] Fetching EUR/USD exchange rate...")
+    eur_usd_rate = 1.0  # Fallback
+    try:
+        eur_usd = yf.Ticker("EURUSD=X")
+        eur_usd_rate = eur_usd.info.get("regularMarketPrice") or eur_usd.info.get("previousClose") or 1.08
+        print(f"  -> EUR/USD Rate: {eur_usd_rate}")
+    except Exception as e:
+        print(f"  [!] Failed to fetch EUR/USD: {e}, using default fallback.")
+
     # ── Save metadata ──
     _write_json(DATA_DIR / "meta.json", {
         "lastFetchedAt": timestamp,
         "assetCount": len(assets),
         "indexCount": len(indices),
         "priceHistoryPeriod": HISTORY_PERIOD,
+        "eurUsdRate": round(eur_usd_rate, 4),
     })
 
     print(f"\n{'='*60}")
