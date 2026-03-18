@@ -75,6 +75,7 @@ export default function AssetDetailClient({ asset, predictions, prices, features
         } catch (e) {
             setLiveData(prev => prev ? { ...prev, fetching: false } : null);
             console.error("Fetch Live Price Exception:", e);
+        }
     };
 
     // Auto-fetch live prices immediately when the page opens
