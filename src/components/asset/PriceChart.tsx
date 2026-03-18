@@ -41,6 +41,7 @@ export default function PriceChart({ data, isPositive }: PriceChartProps) {
                 textColor: "#71717a",
                 fontFamily: "var(--font-geist-mono), ui-monospace, monospace",
                 fontSize: 11,
+                attributionLogo: false,
             },
             grid: {
                 vertLines: { color: "rgba(255, 255, 255, 0.03)" },
