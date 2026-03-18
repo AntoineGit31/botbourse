@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition, useEffect } from "react";
 import Link from "next/link";
 import {
     CaretRight,
@@ -75,8 +75,15 @@ export default function AssetDetailClient({ asset, predictions, prices, features
         } catch (e) {
             setLiveData(prev => prev ? { ...prev, fetching: false } : null);
             console.error("Fetch Live Price Exception:", e);
-        }
     };
+
+    // Auto-fetch live prices immediately when the page opens
+    useEffect(() => {
+        if (ticker) {
+            fetchLivePrice();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [ticker]);
 
     const handleToggleWatchlist = () => {
         if (!isSignedIn) {
