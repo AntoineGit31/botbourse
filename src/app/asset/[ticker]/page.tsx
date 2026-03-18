@@ -32,7 +32,9 @@ async function fetchPricesFromAPI(ticker: string): Promise<OHLCData[]> {
         const host = headersList.get("host") || "localhost:3000";
         const protocol = headersList.get("x-forwarded-proto") || "http";
         const safeTicker = ticker.replace(/\./g, "_").replace(/\^/g, "");
-        const res = await fetch(`${protocol}://${host}/api/prices/${safeTicker}`, {
+        
+        // Fetch static JSON file directly from public folder via CDN instead of API route
+        const res = await fetch(`${protocol}://${host}/data/prices/${safeTicker}.json`, {
             cache: "no-store",
         });
         if (!res.ok) return [];
@@ -48,7 +50,9 @@ async function fetchFeaturesFromAPI(ticker: string): Promise<Record<string, numb
         const host = headersList.get("host") || "localhost:3000";
         const protocol = headersList.get("x-forwarded-proto") || "http";
         const safeTicker = ticker.replace(/\./g, "_").replace(/\^/g, "");
-        const res = await fetch(`${protocol}://${host}/api/features/${safeTicker}`, {
+        
+        // Fetch static JSON file directly from public folder via CDN instead of API route
+        const res = await fetch(`${protocol}://${host}/data/features/${safeTicker}.json`, {
             cache: "no-store",
         });
         if (!res.ok) return null;
